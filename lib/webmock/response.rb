@@ -14,20 +14,28 @@ module WebMock
       end
     end
   end
-  
+
   class Response
+    attr_accessor :net_http_response
+
     def initialize(options = {})
-      if options.is_a?(IO) || options.is_a?(String)
+      if options.is_a?(Net::HTTPResponse)
+        self.net_http_response = options
+      elsif options.is_a?(IO) || options.is_a?(String)
         self.options = read_raw_response(options)
       else
         self.options = options
       end
     end
 
+    def net_http_response?
+      !self.net_http_response.nil?
+    end
+
     def headers
       @headers
     end
-    
+
     def headers=(headers)
       @headers = headers
       if @headers && !@headers.is_a?(Proc)
@@ -38,7 +46,7 @@ module WebMock
     def body
       @body || ''
     end
-    
+
     def body=(body)
       @body = body
       stringify_body!

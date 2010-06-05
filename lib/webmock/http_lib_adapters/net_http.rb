@@ -71,6 +71,21 @@ module Net  #:nodoc: all
     alias_method :request_without_webmock, :request
     alias_method :request, :request_with_webmock
 
+    def request_with_webmock_cache(request, body = nil, &block)
+      if WebMock.cache?
+        WebMock.allow_net_connect!
+        response = request_with_webmock(request, body, &block)
+
+        request_signature = WebMock::NetHTTPUtility.request_signature_from_request(self, request, body)
+
+        WebMock::Cache.instance.add request_signature.uri, response, :method => request_signature.method, :body => request_signature.body
+      else
+        response = request_with_webmock request, body, &block
+      end
+      response
+    end
+    alias_method :request, :request_with_webmock_cache
+
 
     def connect_with_webmock
       unless @@alredy_checked_for_right_http_connection ||= false
@@ -83,7 +98,8 @@ module Net  #:nodoc: all
     alias_method :connect, :connect_with_webmock
 
     def build_net_http_response(webmock_response, &block)
-      response = Net::HTTPResponse.send(:response_class, webmock_response.status[0].to_s).new("1.0", webmock_response.status[0].to_s, webmock_response.status[1])
+      return webmock_response.net_http_response if webmock_response.net_http_response?
+      response = Net::HTTPResponse.send(:response_class, webmock_response.status[0].to_s).new("1.0", webmock_response.status[0].to_s, webmock_response.status[1]) 
       response.instance_variable_set(:@body, webmock_response.body)
       webmock_response.headers.to_a.each { |name, value| response[name] = value }
 

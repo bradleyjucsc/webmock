@@ -1,10 +1,39 @@
 module WebMock
   extend self
 
+  # Cleans the registry, empties all cached responses, and then re-caches all
+  # responses by making the full, un-mocked network call.
+  def self.recache!
+    reset_webmock
+    Cache.instance.clean
+    self.cache = true
+  end
+
+  # Uses cached requests if they exist, otherwise allows network connections
+  def self.use_cached!
+    Config.instance.allow_net_connect = true
+    Cache.instance.load_responses
+  end
+
+  def self.cache=(do_cache)
+    @cache = do_cache
+  end
+
+  # Set the default to no_cache
+  self.cache = false
+
+  def self.cache?
+    @cache
+  end
+
   def self.version
     open(File.join(File.dirname(__FILE__), '../../VERSION')) { |f|
       f.read.strip
     }
+  end
+
+  def self.stub_request(method, uri)
+    RequestRegistry.instance.register_request_stub(RequestStub.new(method, uri))
   end
 
   def stub_request(method, uri)
@@ -43,7 +72,7 @@ module WebMock
     if uri.is_a?(String)
       uri = WebMock::Util::URI.normalize_uri(uri)
     end
-    Config.instance.allow_net_connect || 
+    Config.instance.allow_net_connect ||
       (Config.instance.allow_localhost && uri.is_a?(Addressable::URI) && (uri.host == 'localhost' || uri.host == '127.0.0.1'))
   end
 

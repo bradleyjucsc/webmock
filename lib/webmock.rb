@@ -22,3 +22,5 @@ require 'webmock/request_execution_verifier'
 require 'webmock/config'
 require 'webmock/request_registry'
 require 'webmock/webmock'
+
+require 'webmock/cache'
